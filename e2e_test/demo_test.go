@@ -24,27 +24,29 @@ func tryLoad(key string) string {
 }
 
 func TestDemo(t *testing.T) {
-	token := tryLoad("GITHUB_TOKEN")
-	user := tryLoad("GITHUB_USER")
-	if token == "" || user == "" {
-		t.Skip("skipping test, no token or user")
+	token := tryLoad("GITHUB_PAT")
+	if token == "" {
+		t.Fatal("skipping test, no token provided")
 	}
 
 	pager := github_pagination.NewGithubPaginationClient(nil)
 	gh := github.NewClient(pager).WithAuthToken(token)
 
-	repos, _, err := gh.Repositories.ListByUser(context.Background(), "gofri",
-		&github.RepositoryListByUserOptions{
+	per_page := 3
+
+	repos, _, err := gh.Repositories.ListByAuthenticatedUser(context.Background(),
+		&github.RepositoryListByAuthenticatedUserOptions{
 			ListOptions: github.ListOptions{
-				PerPage: 5,
+				PerPage: per_page,
 			},
+			Visibility: "public",
 		},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count := len(repos); count <= 5 {
-		t.Fatal("expected more than 5 repos, got ", count)
+	if count := len(repos); count <= per_page {
+		t.Fatalf("expected more than %d repos, got %d", per_page, count)
 	}
 	log.Printf("found %v repos: \n", len(repos))
 }

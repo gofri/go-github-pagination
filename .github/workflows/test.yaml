@@ -14,8 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TEST_DIR: e2e_test
-      GITHUB_USER: gofri
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_PAT: ${{ secrets.GO_GITHUB_PAGINATION_PAT }}
     steps:
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5
         with:
@@ -29,7 +28,7 @@ jobs:
         run: go vet -v ./...
       - name: Test
         run: go test -v -count=1 -shuffle=on -timeout=30m -race ./...
-      - name: Vet-Test
+      - name: E2E-Vet
         run: cd "$TEST_DIR" && go vet -v ./...
       - name: E2E-Test
         run: cd "$TEST_DIR" && go test -v -count=1 -shuffle=on -timeout=30m -race ./...
