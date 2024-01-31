@@ -6,6 +6,27 @@ Package `go-github-pagination` provides an http.RoundTripper implementation that
 `go-github-pagination` can be used with any HTTP client communicating with GitHub API.  
 It is meant to complement [go-github](https://github.com/google/go-github), but this repository is not associated with go-github repository nor Google.  
 
+## Installation
+
+```go get github.com/gofri/go-github-pagination```
+
+## Usage Example (with [go-github](https://github.com/google/go-github))
+
+```go
+import "github.com/google/go-github/v58/github"
+import "github.com/gofri/go-github-pagination/github_pagination"
+
+func main() {
+  paginator, err := github_pagination.NewGithubPaginationClient(nil)
+  if err != nil {
+    panic(err)
+  }
+  client := github.NewClient(paginator).WithAuthToken("your personal access token")
+
+  // now use the client as you please
+}
+```
+
 ## Known Limitations
 
 All of these may be developed in the future (some are definitly on the roadmap).  
@@ -60,8 +81,8 @@ The implementation consists of a few building blocks:
 
 ## GitHub Pagination API Documentation References
 
-- [using pagination in the rest api](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api).
-- [using-pagination-in-the-graphql-api](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api).
+- [using pagination in the rest api](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
+- [using-pagination-in-the-graphql-api](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api)
 
 ## License
 
