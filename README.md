@@ -17,10 +17,7 @@ import "github.com/google/go-github/v58/github"
 import "github.com/gofri/go-github-pagination/github_pagination/github_pagination"
 
 func main() {
-  paginator, err := github_pagination.NewGithubPaginationClient(nil)
-  if err != nil {
-    panic(err)
-  }
+  paginator := github_pagination.NewGithubPaginationClient(nil)
   client := github.NewClient(paginator).WithAuthToken("your personal access token")
 
   // now use the client as you please
