@@ -14,7 +14,7 @@ It is meant to complement [go-github](https://github.com/google/go-github), but 
 
 ```go
 import "github.com/google/go-github/v58/github"
-import "github.com/gofri/go-github-pagination/github_pagination"
+import "github.com/gofri/go-github-pagination/github_pagination/github_pagination"
 
 func main() {
   paginator, err := github_pagination.NewGithubPaginationClient(nil)
