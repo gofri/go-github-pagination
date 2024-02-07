@@ -3,6 +3,7 @@ package json_merger
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 )
 
@@ -11,9 +12,16 @@ type unprocessedMapCombiner interface {
 	Finalize(sliceReader io.Reader) io.Reader
 }
 
+type NotPaginatableDictError struct{}
+
+func (e *NotPaginatableDictError) Error() string {
+	return "not a paginatable dictionary"
+}
+
 type UnprocessedMap struct {
-	slice    *UnprocessedSlice
-	combiner unprocessedMapCombiner
+	slice               *UnprocessedSlice
+	combiner            unprocessedMapCombiner
+	unpaginatedResponse *bytes.Buffer
 }
 
 func NewUnprocessedMap(combiner unprocessedMapCombiner) *UnprocessedMap {
@@ -28,7 +36,14 @@ func NewGitHubUnprocessedMap() *UnprocessedMap {
 }
 
 func (m *UnprocessedMap) ReadNext(reader io.ReadCloser) error {
-	nextSlice, err := m.combiner.Digest(reader)
+	var unpaginatedResponse bytes.Buffer
+	tee := io.TeeReader(reader, &unpaginatedResponse)
+	nextSlice, err := m.combiner.Digest(tee)
+	if errors.Is(err, &NotPaginatableDictError{}) {
+		// TODO add test for not paginatable endpoints
+		m.unpaginatedResponse = &unpaginatedResponse
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -45,6 +60,9 @@ func (m *UnprocessedMap) ReadNext(reader io.ReadCloser) error {
 }
 
 func (m *UnprocessedMap) Merged() io.Reader {
+	if m.unpaginatedResponse != nil {
+		return m.unpaginatedResponse
+	}
 	mergedSlice := m.slice.Merged()
 	return m.combiner.Finalize(mergedSlice)
 }
