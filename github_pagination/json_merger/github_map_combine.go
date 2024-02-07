@@ -10,9 +10,9 @@ import (
 // see the main README.md for an explanation of this file.
 
 type pagedMapResponse struct {
-	TotalCount       int             `json:"total_count"`
-	IncompleteResult bool            `json:"incomplete_results"`
-	Items            json.RawMessage `json:"items"`
+	TotalCount       int              `json:"total_count"`
+	IncompleteResult bool             `json:"incomplete_results"`
+	Items            *json.RawMessage `json:"items"`
 }
 
 type githubMapCombiner struct {
@@ -25,12 +25,14 @@ func (g *githubMapCombiner) Digest(reader io.Reader) (slice json.RawMessage, err
 	err = json.NewDecoder(reader).Decode(&result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to digest next map part: %w", err)
+	} else if result.Items == nil {
+		return nil, &NotPaginatableDictError{}
 	}
 
 	g.totalCount += result.TotalCount
 	g.incompleteResults = g.incompleteResults || result.IncompleteResult
 
-	return result.Items, nil
+	return *result.Items, nil
 }
 
 func (g *githubMapCombiner) Finalize(sliceReader io.Reader) (mapReader io.Reader) {
