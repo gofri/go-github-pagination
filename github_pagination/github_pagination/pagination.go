@@ -54,6 +54,7 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 			return resp, nil
 		}
 
+		// get the next request for pagination
 		request = pagination_utils.GetNextRequest(request, resp)
 
 		// early-exit for non-paginated requests
@@ -61,13 +62,17 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 			break
 		}
 
+		// feed the merger
 		if err := merger.ReadNext(resp.Body); err != nil {
 			return resp, err
 		}
 
+		// stop paginating if there are no more pages
 		if request == nil {
 			break
 		}
+
+		// update the count and check if we should stop paginating
 		pageCount++
 		if reqConfig.IsPaginationOverflow(pageCount) {
 			break
