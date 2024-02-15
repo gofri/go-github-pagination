@@ -9,27 +9,38 @@ import (
 )
 
 type GitHubPagination struct {
-	Base http.RoundTripper
+	Base   http.RoundTripper
+	config *Config
 }
 
-func NewGithubPagination(base http.RoundTripper) *GitHubPagination {
+func NewGithubPagination(base http.RoundTripper, opts ...Option) *GitHubPagination {
 	if base == nil {
 		base = http.DefaultTransport
 	}
 	return &GitHubPagination{
-		Base: base,
+		Base:   base,
+		config: newConfig(opts...),
 	}
 }
 
-func NewGithubPaginationClient(base http.RoundTripper) *http.Client {
+func NewGithubPaginationClient(base http.RoundTripper, opts ...Option) *http.Client {
 	return &http.Client{
-		Transport: NewGithubPagination(base),
+		Transport: NewGithubPagination(base, opts...),
 	}
 }
 
 func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response, err error) {
+	reqConfig := g.config.GetRequestConfig(request)
+	if reqConfig.Disabled {
+		return g.Base.RoundTrip(request)
+	}
+
+	// it is enough to call the update request once,
+	// since query parameters are kept through the pagination.
+	request = reqConfig.UpdateRequest(request)
+
 	merger := json_merger.NewMerger()
-	paged := false
+	pageCount := 1
 	for {
 		resp, err = g.Base.RoundTrip(request)
 		if err != nil {
@@ -46,7 +57,7 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 		request = pagination_utils.GetNextRequest(request, resp)
 
 		// early-exit for non-paginated requests
-		if request == nil && !paged {
+		if request == nil && pageCount == 1 {
 			break
 		}
 
@@ -57,12 +68,15 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 		if request == nil {
 			break
 		}
-		paged = true
+		pageCount++
+		if reqConfig.IsPaginationOverflow(pageCount) {
+			break
+		}
 	}
 
 	// only merge if we paginated.
 	// otherwise, we just return the response as is.
-	if paged {
+	if pageCount > 1 {
 		resp.Body = io.NopCloser(merger.Merged())
 	}
 

@@ -3,6 +3,7 @@ package github_pagination
 import (
 	"context"
 	"net/http"
+	"strconv"
 )
 
 type Config struct {
@@ -12,6 +13,12 @@ type Config struct {
 }
 
 type ConfigOverridesKey struct{}
+
+func newConfig(opts ...Option) *Config {
+	var c Config
+	c.ApplyOptions(opts...)
+	return &c
+}
 
 // ApplyOptions applies the options to the config.
 func (c *Config) ApplyOptions(opts ...Option) {
@@ -33,6 +40,20 @@ func (c *Config) GetRequestConfig(request *http.Request) *Config {
 	reqConfig := *c
 	reqConfig.ApplyOptions(overrides...)
 	return &reqConfig
+}
+
+func (c *Config) UpdateRequest(request *http.Request) *http.Request {
+	if c.DefaultPerPage == 0 {
+		return request
+	}
+	query := request.URL.Query()
+	query.Set("per_page", strconv.Itoa(c.DefaultPerPage))
+	request.URL.RawQuery = query.Encode()
+	return request
+}
+
+func (c *Config) IsPaginationOverflow(pageCount int) bool {
+	return c.MaxNumOfPages > 0 && pageCount > c.MaxNumOfPages
 }
 
 // WithOverrideConfig adds config overrides to the context.
