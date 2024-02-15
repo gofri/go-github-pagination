@@ -35,7 +35,7 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 		return g.Base.RoundTrip(request)
 	}
 
-	// it is enough to call the update request once,
+	// it is enough to call update-request once,
 	// since query parameters are kept through the pagination.
 	request = reqConfig.UpdateRequest(request)
 
