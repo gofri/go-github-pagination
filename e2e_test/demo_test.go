@@ -15,13 +15,12 @@ func TestDemo(t *testing.T) {
 
 	per_page := 3
 
-	repos, _, err := gh.Repositories.List(context.Background(),
+	repos, _, err := gh.Repositories.ListByUser(context.Background(),
 		"gofri",
-		&github.RepositoryListOptions{
+		&github.RepositoryListByUserOptions{
 			ListOptions: github.ListOptions{
 				PerPage: per_page,
 			},
-			Visibility: "public",
 		},
 	)
 	if err != nil {
