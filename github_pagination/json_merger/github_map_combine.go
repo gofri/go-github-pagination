@@ -25,8 +25,6 @@ func (g *githubMapCombiner) Digest(reader io.Reader) (slice json.RawMessage, err
 	err = json.NewDecoder(reader).Decode(&result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to digest next map part: %w", err)
-	} else if result.Items == nil {
-		return nil, &NotPaginatableDictError{}
 	}
 
 	g.totalCount += result.TotalCount

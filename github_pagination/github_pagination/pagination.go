@@ -29,6 +29,7 @@ func NewGithubPaginationClient(base http.RoundTripper) *http.Client {
 
 func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response, err error) {
 	merger := json_merger.NewMerger()
+	paged := false
 	for {
 		resp, err = g.Base.RoundTrip(request)
 		if err != nil {
@@ -42,16 +43,28 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 			return resp, nil
 		}
 
+		request = pagination_utils.GetNextRequest(request, resp)
+
+		// early-exit for non-paginated requests
+		if request == nil && !paged {
+			break
+		}
+
 		if err := merger.ReadNext(resp.Body); err != nil {
 			return resp, err
 		}
 
-		request = pagination_utils.GetNextRequest(request, resp)
 		if request == nil {
 			break
 		}
+		paged = true
 	}
 
-	resp.Body = io.NopCloser(merger.Merged())
+	// only merge if we paginated.
+	// otherwise, we just return the response as is.
+	if paged {
+		resp.Body = io.NopCloser(merger.Merged())
+	}
+
 	return resp, nil
 }
