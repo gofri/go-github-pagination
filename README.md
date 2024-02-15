@@ -36,7 +36,6 @@ Unsupported features (at this point):
 - Per-request configuration override.
 - Concurrent fetching of pages.
 - Progress bar styled report (callback).
-- Reverse pagination (does that really make sense to anyone?)
 - GraphQL pagination.
 
 ## Async Pagination
