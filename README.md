@@ -31,9 +31,7 @@ Please open an issue or a pull request if you need any.
 Unsupported features (at this point):
 
 - Async interface (see below).
-- Total pages limitation.
 - Custom strategy in case of primary/secondary rate limits / errors.
-- Per-request configuration override.
 - Concurrent fetching of pages.
 - Progress bar styled report (callback).
 - GraphQL pagination.
