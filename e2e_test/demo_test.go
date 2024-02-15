@@ -50,3 +50,21 @@ func TestDemo(t *testing.T) {
 	}
 	log.Printf("found %v repos: \n", len(repos))
 }
+
+func TestNonpagination(t *testing.T) {
+	token := tryLoad("GITHUB_PAT")
+	if token == "" {
+		t.Fatal("skipping test, no token provided")
+	}
+
+	pager := github_pagination.NewGithubPaginationClient(nil)
+	gh := github.NewClient(pager).WithAuthToken(token)
+
+	issue, _, err := gh.Issues.Get(context.Background(), "gofri", "go-github-pagination", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if issue == nil {
+		t.Fatal("expected an issue")
+	}
+}
