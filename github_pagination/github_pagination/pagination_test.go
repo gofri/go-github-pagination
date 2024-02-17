@@ -15,21 +15,22 @@ import (
 const totalItems = 20
 
 type ClosableBody struct {
-	body   bytes.Buffer
-	closed *bool
+	body     bytes.Buffer
+	closeCnt *int
 }
 
 func (c *ClosableBody) Read(p []byte) (n int, err error) {
 	return c.body.Read(p)
 }
 func (c *ClosableBody) Close() error {
-	*c.closed = true
+	*c.closeCnt += 1
 	return nil
 }
 
 type server struct {
-	t      *testing.T
-	closed bool
+	t          *testing.T
+	CloseCnt   int
+	Iterations int
 }
 
 func (s *server) CompleteData() []int {
@@ -38,6 +39,35 @@ func (s *server) CompleteData() []int {
 		data = append(data, i)
 	}
 	return data
+}
+
+func (s *server) TestFullResponse(resp *http.Response, numPages int) {
+	s.TestPartialResponse(resp, numPages, totalItems)
+}
+func (s *server) TestPartialResponse(resp *http.Response, numPages int, total int) {
+	if got, want := s.CloseCnt, numPages; got != want {
+		s.t.Fatalf("expected %d close calls, got %d", want, got)
+	}
+
+	var body []int
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		s.t.Fatalf("failed to decode response body: %v", err)
+	}
+	data := s.CompleteData()
+	body = body[:total]
+	if len(body) != total {
+		s.t.Fatalf("expected %d items, got %d", totalItems, len(body))
+	}
+	if got, want := body, data; slices.Compare(got, want) != 0 {
+		s.t.Fatalf("expected %v, got %v", want, got)
+	}
+	if err := resp.Body.Close(); err != nil {
+		s.t.Fatalf("failed to close response body: %v", err)
+	}
+
+	if s.Iterations != numPages {
+		s.t.Fatalf("expected %d iterations, got %d", numPages, s.Iterations)
+	}
 }
 
 func (s *server) getBody(page int, perPage int) []byte {
@@ -72,6 +102,7 @@ func (s *server) getHeader(page int, perPage int) http.Header {
 }
 
 func (s *server) RoundTrip(req *http.Request) (*http.Response, error) {
+	s.Iterations += 1
 	page := req.URL.Query().Get("page")
 	perPage := req.URL.Query().Get("per_page")
 	pageInt, err := strconv.Atoi(page)
@@ -86,8 +117,8 @@ func (s *server) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	body := s.getBody(pageInt, perPageInt)
 	closable := &ClosableBody{
-		body:   *bytes.NewBuffer(body),
-		closed: &s.closed,
+		body:     *bytes.NewBuffer(body),
+		closeCnt: &s.CloseCnt,
 	}
 	if body == nil {
 		return &http.Response{
@@ -103,26 +134,24 @@ func (s *server) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestBasic(t *testing.T) {
+	numPages := 4
+	perPage := totalItems / numPages
 	server := &server{t: t}
 	pagination := github_pagination.NewGithubPaginationClient(server)
-	resp, err := pagination.Get("http://example.com?per_page=5")
+	resp, err := pagination.Get(fmt.Sprintf("http://example.com?per_page=%d", perPage))
 	if err != nil {
 		t.Fatalf("failed to get response: %v", err)
 	}
-	if !server.closed {
-		t.Fatalf("server not closed")
+	server.TestFullResponse(resp, numPages)
+}
+
+func TestConfig(t *testing.T) {
+	server := &server{t: t}
+	pagination := github_pagination.NewGithubPaginationClient(server,
+		github_pagination.WithPerPage(10))
+	body, err := pagination.Get("http://example.com")
+	if err != nil {
+		t.Fatalf("failed to get response: %v", err)
 	}
-	var body []int
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		t.Fatalf("failed to decode response body: %v", err)
-	}
-	if len(body) != totalItems {
-		t.Fatalf("expected %d items, got %d", totalItems, len(body))
-	}
-	if got, want := body, server.CompleteData(); slices.Compare(got, want) != 0 {
-		t.Fatalf("expected %v, got %v", want, got)
-	}
-	if err := resp.Body.Close(); err != nil {
-		t.Fatalf("failed to close response body: %v", err)
-	}
+	server.TestFullResponse(body, 2)
 }
