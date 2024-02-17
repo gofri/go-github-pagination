@@ -17,7 +17,9 @@ import "github.com/google/go-github/v58/github"
 import "github.com/gofri/go-github-pagination/github_pagination/github_pagination"
 
 func main() {
-  paginator := github_pagination.NewGithubPaginationClient(nil)
+  paginator := github_pagination.NewGithubPaginationClient(nil,
+    github_pagination.WithPerPage(100), // default to 100 results per page
+  )
   client := github.NewClient(paginator).WithAuthToken("your personal access token")
 
   // now use the client as you please

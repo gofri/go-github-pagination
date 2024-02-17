@@ -159,7 +159,8 @@ func TestConfig(t *testing.T) {
 
 	t.Run("PerPage", func(t *testing.T) {
 		pagination := github_pagination.NewGithubPaginationClient(server,
-			github_pagination.WithPerPage(10))
+			github_pagination.WithPerPage(10),
+		)
 		body, err := pagination.Get("http://example.com?per_page=5")
 		if err != nil {
 			t.Fatalf("failed to get response: %v", err)
