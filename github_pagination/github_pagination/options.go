@@ -1,9 +1,5 @@
 package github_pagination
 
-const (
-	MaxPerPage = 100
-)
-
 type Option func(*Config)
 
 // WithPaginationEnabled enables the pagination for paginated requests.
