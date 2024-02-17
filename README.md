@@ -24,6 +24,20 @@ func main() {
 }
 ```
 
+## Client Options
+
+The RoundTripper accepts a set of options to configure its behavior.
+The options are:
+
+- `WithPaginationEnabled` / `WithPaginationDisabled`: enable/disable pagination (default: enabled).
+- `WithPerPage`: Set the default `per_page` value for requests (recommended: 100).
+- `WithMaxNumOfPages`: Set the maximum number of pages to return.
+
+## Per-Request Options
+
+Use `WithOverrideConfig(opts...)` to override the configuration for a specific request (using the request context).  
+Per-request configurations are especially useful if you want to enable/disable/limit pagination for specific requests.
+
 ## Known Limitations
 
 All of these may be developed in the future (some are definitly on the roadmap).  
@@ -32,8 +46,7 @@ Unsupported features (at this point):
 
 - Async interface (see below).
 - Custom strategy in case of primary/secondary rate limits / errors.
-- Concurrent fetching of pages.
-- Progress bar styled report (callback).
+- Callbacks.
 - GraphQL pagination.
 
 ## Async Pagination
@@ -42,7 +55,6 @@ Async pagination refers to handling pages while fetching the next pages.
 Unfortunately, the interfaces of both http.Client & go_github.Client have a sync nature.  
 This fact makes total sense for itself, but it makes it impossible to shove async pagination under the hood without abusing the interface.  
 As a result, async pagination must be supported via an additional interface.
-Although not yet implemented, it is likely to be something like `ch := PaginateAsync(request_action, args...)`.
 Specifically, I intend to provide an interface that accepts go-github functions for usability.
 Please feel free to share you thoughts/needs for this interface.
 
