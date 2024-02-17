@@ -68,12 +68,11 @@ func (s *server) TestPartialResponse(resp *http.Response, numPages int, total in
 	if got, want := body, data; slices.Compare(got, want) != 0 {
 		s.t.Fatalf("expected %v, got %v", want, got)
 	}
-	if err := resp.Body.Close(); err != nil {
-		s.t.Fatalf("failed to close response body: %v", err)
-	}
-
 	if s.Iterations != numPages {
 		s.t.Fatalf("expected %d iterations, got %d", numPages, s.Iterations)
+	}
+	if err := resp.Body.Close(); err != nil {
+		s.t.Fatalf("failed to close response body: %v", err)
 	}
 }
 
@@ -182,11 +181,33 @@ func TestConfig(t *testing.T) {
 	t.Run("Disabled", func(t *testing.T) {
 		pagination := github_pagination.NewGithubPaginationClient(server,
 			github_pagination.WithPaginationDisabled())
-		body, err := pagination.Get("http://example.com?per_page=5")
+		resp, err := pagination.Get("http://example.com?per_page=5")
 		if err != nil {
 			t.Fatalf("failed to get response: %v", err)
 		}
-		server.TestPartialResponse(body, 1, 3)
+		defer server.Reset()
+		if got, want := server.CloseCnt, 0; got != want {
+			t.Fatalf("expected %d close calls, got %d", want, got)
+		}
+
+		var body []int
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatalf("failed to decode response body: %v", err)
+		}
+		data := server.CompleteData()[:5]
+		if len(body) != 5 {
+			t.Fatalf("expected %d items, got %d", totalItems, len(body))
+		}
+		if got, want := body, data; slices.Compare(got, want) != 0 {
+			t.Fatalf("expected %v, got %v", want, got)
+		}
+		if server.Iterations != 1 {
+			t.Fatalf("expected %d iterations, got %d", 1, server.Iterations)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Fatalf("failed to close response body: %v", err)
+		}
+
 	})
 
 	t.Run("PerRequestConfig", func(t *testing.T) {
