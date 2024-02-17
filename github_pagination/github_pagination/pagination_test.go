@@ -2,6 +2,7 @@ package github_pagination_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -33,6 +34,11 @@ type server struct {
 	Iterations int
 }
 
+func (s *server) Reset() {
+	s.CloseCnt = 0
+	s.Iterations = 0
+}
+
 func (s *server) CompleteData() []int {
 	var data []int
 	for i := 0; i < totalItems; i++ {
@@ -45,6 +51,7 @@ func (s *server) TestFullResponse(resp *http.Response, numPages int) {
 	s.TestPartialResponse(resp, numPages, totalItems)
 }
 func (s *server) TestPartialResponse(resp *http.Response, numPages int, total int) {
+	defer s.Reset()
 	if got, want := s.CloseCnt, numPages; got != want {
 		s.t.Fatalf("expected %d close calls, got %d", want, got)
 	}
@@ -54,7 +61,7 @@ func (s *server) TestPartialResponse(resp *http.Response, numPages int, total in
 		s.t.Fatalf("failed to decode response body: %v", err)
 	}
 	data := s.CompleteData()
-	body = body[:total]
+	data = data[:total]
 	if len(body) != total {
 		s.t.Fatalf("expected %d items, got %d", totalItems, len(body))
 	}
@@ -134,6 +141,7 @@ func (s *server) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestBasic(t *testing.T) {
+	t.Parallel()
 	numPages := 4
 	perPage := totalItems / numPages
 	server := &server{t: t}
@@ -146,12 +154,62 @@ func TestBasic(t *testing.T) {
 }
 
 func TestConfig(t *testing.T) {
+	t.Parallel()
 	server := &server{t: t}
-	pagination := github_pagination.NewGithubPaginationClient(server,
-		github_pagination.WithPerPage(10))
-	body, err := pagination.Get("http://example.com")
-	if err != nil {
-		t.Fatalf("failed to get response: %v", err)
-	}
-	server.TestFullResponse(body, 2)
+
+	t.Run("PerPage", func(t *testing.T) {
+		pagination := github_pagination.NewGithubPaginationClient(server,
+			github_pagination.WithPerPage(10))
+		body, err := pagination.Get("http://example.com?per_page=5")
+		if err != nil {
+			t.Fatalf("failed to get response: %v", err)
+		}
+		server.TestFullResponse(body, 2)
+	})
+
+	t.Run("MaxPages", func(t *testing.T) {
+		pagination := github_pagination.NewGithubPaginationClient(server,
+			github_pagination.WithPerPage(3),
+			github_pagination.WithMaxNumOfPages(2))
+		body, err := pagination.Get("http://example.com?per_page=5")
+		if err != nil {
+			t.Fatalf("failed to get response: %v", err)
+		}
+		server.TestPartialResponse(body, 2, 6)
+	})
+
+	t.Run("Disabled", func(t *testing.T) {
+		pagination := github_pagination.NewGithubPaginationClient(server,
+			github_pagination.WithPaginationDisabled())
+		body, err := pagination.Get("http://example.com?per_page=5")
+		if err != nil {
+			t.Fatalf("failed to get response: %v", err)
+		}
+		server.TestPartialResponse(body, 1, 3)
+	})
+
+	t.Run("PerRequestConfig", func(t *testing.T) {
+		numPages := 4
+		perPage := totalItems / numPages
+		pagination := github_pagination.NewGithubPaginationClient(server,
+			github_pagination.WithPaginationDisabled())
+
+		req, err := http.NewRequestWithContext(
+			github_pagination.WithOverrideConfig(
+				context.Background(),
+				github_pagination.WithPaginationEnabled(),
+			),
+			"GET",
+			fmt.Sprintf("http://example.com?per_page=%d", perPage),
+			nil,
+		)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+		body, err := pagination.Do(req)
+		if err != nil {
+			t.Fatalf("failed to get response: %v", err)
+		}
+		server.TestFullResponse(body, 4)
+	})
 }
