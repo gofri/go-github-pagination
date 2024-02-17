@@ -54,7 +54,7 @@ func (p *paginationResponseParser) GetNextRequest(prevRequest *http.Request, pre
 	request := prevRequest.Clone(prevRequest.Context())
 	query := request.URL.Query()
 	for key, value := range params {
-		query.Add(key, value)
+		query.Set(key, value)
 	}
 	request.URL.RawQuery = query.Encode()
 
