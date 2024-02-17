@@ -17,12 +17,28 @@ import "github.com/google/go-github/v58/github"
 import "github.com/gofri/go-github-pagination/github_pagination/github_pagination"
 
 func main() {
-  paginator := github_pagination.NewGithubPaginationClient(nil)
+  paginator := github_pagination.NewGithubPaginationClient(nil,
+    github_pagination.WithPerPage(100), // default to 100 results per page
+  )
   client := github.NewClient(paginator).WithAuthToken("your personal access token")
 
   // now use the client as you please
 }
 ```
+
+## Client Options
+
+The RoundTripper accepts a set of options to configure its behavior.
+The options are:
+
+- `WithPaginationEnabled` / `WithPaginationDisabled`: enable/disable pagination (default: enabled).
+- `WithPerPage`: Set the default `per_page` value for requests (recommended: 100).
+- `WithMaxNumOfPages`: Set the maximum number of pages to return.
+
+## Per-Request Options
+
+Use `WithOverrideConfig(opts...)` to override the configuration for a specific request (using the request context).  
+Per-request configurations are especially useful if you want to enable/disable/limit pagination for specific requests.
 
 ## Known Limitations
 
@@ -31,12 +47,8 @@ Please open an issue or a pull request if you need any.
 Unsupported features (at this point):
 
 - Async interface (see below).
-- Total pages limitation.
 - Custom strategy in case of primary/secondary rate limits / errors.
-- Per-request configuration override.
-- Concurrent fetching of pages.
-- Progress bar styled report (callback).
-- Reverse pagination (does that really make sense to anyone?)
+- Callbacks.
 - GraphQL pagination.
 
 ## Async Pagination
@@ -45,7 +57,6 @@ Async pagination refers to handling pages while fetching the next pages.
 Unfortunately, the interfaces of both http.Client & go_github.Client have a sync nature.  
 This fact makes total sense for itself, but it makes it impossible to shove async pagination under the hood without abusing the interface.  
 As a result, async pagination must be supported via an additional interface.
-Although not yet implemented, it is likely to be something like `ch := PaginateAsync(request_action, args...)`.
 Specifically, I intend to provide an interface that accepts go-github functions for usability.
 Please feel free to share you thoughts/needs for this interface.
 
