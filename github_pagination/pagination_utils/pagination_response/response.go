@@ -26,14 +26,14 @@ func NewParser() *paginationResponseParser {
 	}
 }
 
-func (p *paginationResponseParser) parse(resp *http.Response) map[string]string {
-	if resp == nil {
+func (p *paginationResponseParser) parse(response *http.Response) map[string]string {
+	if response == nil {
 		return nil
 	}
-	if resp.Header == nil {
+	if response.Header == nil {
 		return nil
 	}
-	linkHeader, ok := resp.Header["Link"]
+	linkHeader, ok := response.Header["Link"]
 	if !ok || len(linkHeader) == 0 {
 		return nil
 	}

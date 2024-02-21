@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TEST_DIR: e2e_test
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5
         with:

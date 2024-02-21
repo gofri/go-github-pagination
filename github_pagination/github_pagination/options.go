@@ -1,5 +1,7 @@
 package github_pagination
 
+import "github.com/gofri/go-github-pagination/github_pagination/github_pagination/pagination_drivers"
+
 type Option func(*Config)
 
 // WithPaginationEnabled enables the pagination for paginated requests.
@@ -33,5 +35,16 @@ func WithPerPage(perPage int) Option {
 func WithMaxNumOfPages(maxNumOfPages int) Option {
 	return func(c *Config) {
 		c.MaxNumOfPages = maxNumOfPages
+	}
+}
+
+// WithDriver sets the driver for paginated requests.
+// Available drivers out-of-the-box:
+// - sync (default): handle pagination synchronously.
+// - raw_async: handle pagination asynchronously using raw HTTP requests/responses.
+// - async: handle pagination asynchronously with github orientation.
+func WithDriver(driver pagination_drivers.Driver) Option {
+	return func(c *Config) {
+		c.Driver = driver
 	}
 }

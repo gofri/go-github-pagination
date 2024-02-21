@@ -6,6 +6,12 @@ Package `go-github-pagination` provides an http.RoundTripper implementation that
 `go-github-pagination` can be used with any HTTP client communicating with GitHub API.  
 It is meant to complement [go-github](https://github.com/google/go-github), but this repository is not associated with go-github repository nor Google.  
 
+## Recommended: Rate Limit Handling
+
+Please checkout my other repository, [go-github-ratelimit](https://github.com/gofri/go-github-ratelimit).  
+It supports rate limit handling out of the box, and plays well with the pagination round-tripper.  
+It is best to stack the pagination round-tripper on top of the ratelimit round-tripper.  
+
 ## Installation
 
 ```go get github.com/gofri/go-github-pagination```
@@ -17,7 +23,7 @@ import "github.com/google/go-github/v58/github"
 import "github.com/gofri/go-github-pagination/github_pagination/github_pagination"
 
 func main() {
-  paginator := github_pagination.NewGithubPaginationClient(nil,
+  paginator := github_pagination.NewClient(nil,
     github_pagination.WithPerPage(100), // default to 100 results per page
   )
   client := github.NewClient(paginator).WithAuthToken("your personal access token")
@@ -31,36 +37,50 @@ func main() {
 The RoundTripper accepts a set of options to configure its behavior.
 The options are:
 
-- `WithPaginationEnabled` / `WithPaginationDisabled`: enable/disable pagination (default: enabled).
-- `WithPerPage`: Set the default `per_page` value for requests (recommended: 100).
-- `WithMaxNumOfPages`: Set the maximum number of pages to return.
+- `WithPaginationEnabled` / `WithPaginationDisabled`: enable/disable pagination. default: enabled.
+- `WithPerPage`: Set the default `per_page` value for requests. recommended: 100. default: not set, server-side decision.
+- `WithMaxNumOfPages`: Set the maximum number of pages to return. default: unlimited.
+- `WithDriver`: Use a custom pagination driver (see async pagination comment). default: sync.
 
 ## Per-Request Options
 
 Use `WithOverrideConfig(opts...)` to override the configuration for a specific request (using the request context).  
 Per-request configurations are especially useful if you want to enable/disable/limit pagination for specific requests.
 
-## Known Limitations
-
-All of these may be developed in the future (some are definitly on the roadmap).  
-Please open an issue or a pull request if you need any.  
-Unsupported features (at this point):
-
-- Async interface (see below).
-- Custom strategy in case of primary/secondary rate limits / errors.
-- Callbacks.
-- GraphQL pagination.
-
 ## Async Pagination
 
-Async pagination refers to handling pages while fetching the next pages.  
-Unfortunately, the interfaces of both http.Client & go_github.Client have a sync nature.  
-This fact makes total sense for itself, but it makes it impossible to shove async pagination under the hood without abusing the interface.  
-As a result, async pagination must be supported via an additional interface.
-Specifically, I intend to provide an interface that accepts go-github functions for usability.
-Please feel free to share you thoughts/needs for this interface.
+Async pagination enables users to handle pages concurrently.  
+Since the interfaces of both `http.Client` & `go_github.Client` are sync,  
+the interface for async pagination uses wrappers.
+The wrapper is designed to support go-github out of the box.  
+You can find useful examples in the e2e-tests for different use cases.  
+In addition, there are lower-level primitives for plumbers who want to implement their own pagination driver.  
+Please dive into the code or open an issue for help with that.
 
-## Incomplete Results
+_Note: please open an issue if you think that a channel-based interface would work better for you._
+
+Usage example:
+
+```go
+  paginator := github_pagination.NewClient(nil,
+    github_pagination.WithPerPage(100), // default to 100 results per page
+  )
+  client := github.NewClient(paginator).WithAuthToken("your personal access token")
+  handler := func(resp *http.Response, repos []*github.Repository) error {
+    fmt.Printf("found repos: %+v\n", repos)
+    return nil
+  }
+  ctx := github_pagination.WithOverrideConfig(context.Background(),
+    github_pagination.WithMaxNumOfPages(3), // e.g, limit number of pages for this request
+  )
+  async := github_pagination.NewAsync(handler)
+  err := async.Paginate(client.Repositories.ListByUser, ctx, "gofri", nil)
+  if err != nil {
+    panic(err)
+  }
+```
+
+## Search Pagination - Incomplete Results
 
 According to the (obscure) API documentation, some endpoints may return a dictionary instead of an array.
 This return scheme is used to report incomplete results (due to timeouts).
@@ -87,10 +107,18 @@ The implementation consists of a few building blocks:
 - `pagination_utils`: utilities to handle the pagination API used by GitHub.
 - `github_pagination`: the main package that glues everything into an http.RoundTripper.
 
+## Known Limitations
+
+The following features may be implemented in the future, per request.
+Please open an issue or a pull request if you need any.  
+
+- Callbacks.
+- GraphQL pagination.
+
 ## GitHub Pagination API Documentation References
 
 - [using pagination in the rest api](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
-- [using-pagination-in-the-graphql-api](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api)
+- [using pagination in the graphql api](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api)
 
 ## License
 

@@ -38,14 +38,10 @@ func NewUnprocessedSlice() *UnprocessedSlice {
 }
 
 func (slice *UnprocessedSlice) ReadNext(reader io.ReadCloser) error {
-	decoder := json.NewDecoder(reader)
-
+	defer reader.Close()
 	var toAppend []json.RawMessage
-	if err := decoder.Decode(&toAppend); err != nil {
+	if err := json.NewDecoder(reader).Decode(&toAppend); err != nil {
 		return err
-	}
-	if err := reader.Close(); err != nil {
-		return err // TODO should close on failure too (defer and set error) ?
 	}
 	slice.subSlices = append(slice.subSlices, toAppend...)
 
@@ -90,6 +86,9 @@ func (r *slicesReader) Read(p []byte) (n int, err error) {
 func (r *slicesReader) getNextDataToRead() []byte {
 	curIndex := r.index
 	numOfSlices := len(r.slice.subSlices)
+	if numOfSlices == 0 {
+		return nil
+	}
 	switch {
 	case curIndex == -1: // first read - open the array
 		return []byte{'['}

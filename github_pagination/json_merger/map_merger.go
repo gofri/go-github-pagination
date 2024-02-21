@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+
+	"github.com/gofri/go-github-pagination/github_pagination/pagination_utils/gh_search_result"
 )
 
 type unprocessedMapCombiner interface {
@@ -24,16 +26,14 @@ func NewUnprocessedMap(combiner unprocessedMapCombiner) *UnprocessedMap {
 }
 
 func NewGitHubUnprocessedMap() *UnprocessedMap {
-	return NewUnprocessedMap(&githubMapCombiner{})
+	return NewUnprocessedMap(gh_search_result.NewMerger())
 }
 
 func (m *UnprocessedMap) ReadNext(reader io.ReadCloser) error {
+	defer reader.Close()
 	nextSlice, err := m.combiner.Digest(reader)
 	if err != nil {
 		return err
-	}
-	if err := reader.Close(); err != nil {
-		return err // TODO should close on failure too (defer and set error) ?
 	}
 
 	sliceReader := bytes.NewReader(nextSlice)

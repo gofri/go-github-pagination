@@ -1,19 +1,20 @@
 package github_pagination
 
 import (
-	"io"
 	"net/http"
 
-	"github.com/gofri/go-github-pagination/github_pagination/json_merger"
+	"github.com/gofri/go-github-pagination/github_pagination/github_pagination/pagination_drivers"
 	"github.com/gofri/go-github-pagination/github_pagination/pagination_utils"
 )
+
+type PaginationDriver = pagination_drivers.Driver
 
 type GitHubPagination struct {
 	Base   http.RoundTripper
 	config *Config
 }
 
-func NewGithubPagination(base http.RoundTripper, opts ...Option) *GitHubPagination {
+func New(base http.RoundTripper, opts ...Option) *GitHubPagination {
 	if base == nil {
 		base = http.DefaultTransport
 	}
@@ -23,48 +24,55 @@ func NewGithubPagination(base http.RoundTripper, opts ...Option) *GitHubPaginati
 	}
 }
 
-func NewGithubPaginationClient(base http.RoundTripper, opts ...Option) *http.Client {
+func NewClient(base http.RoundTripper, opts ...Option) *http.Client {
 	return &http.Client{
-		Transport: NewGithubPagination(base, opts...),
+		Transport: New(base, opts...),
 	}
 }
 
-func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response, err error) {
+func (g *GitHubPagination) RoundTrip(request *http.Request) (*http.Response, error) {
 	reqConfig := g.config.GetRequestConfig(request)
 	if reqConfig.Disabled {
 		return g.Base.RoundTrip(request)
 	}
+	driver := reqConfig.GetDriver()
 
 	// it is enough to call update-request once,
 	// since query parameters are kept through the pagination.
 	request = reqConfig.UpdateRequest(request)
 
-	merger := json_merger.NewMerger()
 	pageCount := 1
+	var response *http.Response
 	for {
-		resp, err = g.Base.RoundTrip(request)
+		var err error
+
+		// send the request
+		response, err = g.Base.RoundTrip(request)
 		if err != nil {
-			return resp, err
+			driver.OnBadResponse(response, err)
+			return nil, err
 		}
 
 		// only paginate through successful requests.
-		// having a non-successful request would drop all previous results.
-		// TODO this is gonna have a config for strictness (i.e., whether to drop all previous results or not)
-		if resp.StatusCode != http.StatusOK {
-			return resp, nil
-		}
-
-		// get the next request for pagination
-		request = pagination_utils.GetNextRequest(request, resp)
-
-		// early-exit for non-paginated requests
-		if request == nil && pageCount == 1 {
+		if response.StatusCode != http.StatusOK {
+			driver.OnBadResponse(response, err)
 			break
 		}
 
-		// feed the merger
-		if err := merger.ReadNext(resp.Body); err != nil {
-			return resp, err
+		// get the next request for pagination
+		request = pagination_utils.GetNextRequest(request, response)
+		if err := driver.OnNextRequest(request, pageCount); err != nil {
+			if pagination_drivers.ShouldStop(err) {
+				break
+			}
+			return nil, err
+		}
+
+		if err := driver.OnNextResponse(response, request, pageCount); err != nil {
+			if pagination_drivers.ShouldStop(err) {
+				break
+			}
+			return nil, err
 		}
 
 		// stop paginating if there are no more pages
@@ -79,11 +87,8 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (resp *http.Response
 		}
 	}
 
-	// only merge if we paginated.
-	// otherwise, we just return the response as is.
-	if pageCount > 1 {
-		resp.Body = io.NopCloser(merger.Merged())
+	if err := driver.OnFinish(response, pageCount); err != nil {
+		return nil, err
 	}
-
-	return resp, nil
+	return response, nil
 }
