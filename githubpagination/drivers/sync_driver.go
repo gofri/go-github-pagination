@@ -25,19 +25,19 @@ func (d *SyncPaginationDriver) OnNextRequest(request *http.Request, pageCount in
 	return nil
 }
 
-func (d *SyncPaginationDriver) OnNextResponse(response *http.Response, nextRequest *http.Request, pageCount int) error {
-	if err := d.merger.ReadNext(response.Body); err != nil {
+func (d *SyncPaginationDriver) OnNextResponse(resp *http.Response, nextRequest *http.Request, pageCount int) error {
+	if err := d.merger.ReadNext(resp.Body); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *SyncPaginationDriver) OnFinish(response *http.Response, pageCount int) error {
+func (d *SyncPaginationDriver) OnFinish(resp *http.Response, pageCount int) error {
 	if pageCount > 1 {
-		response.Body = io.NopCloser(d.merger.Merged())
+		resp.Body = io.NopCloser(d.merger.Merged())
 	}
 	return nil
 }
 
-func (d *SyncPaginationDriver) OnBadResponse(response *http.Response, err error) {
+func (d *SyncPaginationDriver) OnBadResponse(resp *http.Response, err error) {
 }

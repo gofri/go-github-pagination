@@ -30,14 +30,14 @@ func NewParser() *Parser {
 	}
 }
 
-func (p *Parser) parse(response *http.Response) map[string]string {
-	if response == nil {
+func (p *Parser) parse(resp *http.Response) map[string]string {
+	if resp == nil {
 		return nil
 	}
-	if response.Header == nil {
+	if resp.Header == nil {
 		return nil
 	}
-	linkHeader, ok := response.Header["Link"]
+	linkHeader, ok := resp.Header["Link"]
 	if !ok || len(linkHeader) == 0 {
 		return nil
 	}

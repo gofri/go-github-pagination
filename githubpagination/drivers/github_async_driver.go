@@ -37,35 +37,35 @@ type githubRawHandler[DataType any] struct {
 	isSearchResponseType bool
 }
 
-func (h *githubRawHandler[DataType]) HandleRawPage(response *http.Response) error {
-	data, err := h.parseResponse(response)
+func (h *githubRawHandler[DataType]) HandleRawPage(resp *http.Response) error {
+	data, err := h.parseResponse(resp)
 	if err != nil {
 		return err
 	}
-	if err := h.handler.HandlePage(data, response); err != nil {
+	if err := h.handler.HandlePage(data, resp); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (h *githubRawHandler[DataType]) HandleRawFinish(response *http.Response, pageCount int) {
-	h.handler.HandleFinish(response, pageCount)
+func (h *githubRawHandler[DataType]) HandleRawFinish(resp *http.Response, pageCount int) {
+	h.handler.HandleFinish(resp, pageCount)
 }
 
-func (h *githubRawHandler[DataType]) HandleRawError(err error, response *http.Response) {
-	h.handler.HandleError(response, err)
+func (h *githubRawHandler[DataType]) HandleRawError(err error, resp *http.Response) {
+	h.handler.HandleError(resp, err)
 }
 
-func (h *githubRawHandler[DataType]) parseResponse(response *http.Response) (*searchresult.Typed[DataType], error) {
+func (h *githubRawHandler[DataType]) parseResponse(resp *http.Response) (*searchresult.Typed[DataType], error) {
 	if h.isSearchResponseType {
-		return h.parseSearchResponse(response)
+		return h.parseSearchResponse(resp)
 	}
-	return h.parseSliceResponse(response)
+	return h.parseSliceResponse(resp)
 }
 
-func (h *githubRawHandler[DataType]) parseSearchResponse(response *http.Response) (*searchresult.Typed[DataType], error) {
+func (h *githubRawHandler[DataType]) parseSearchResponse(resp *http.Response) (*searchresult.Typed[DataType], error) {
 	var untyped searchresult.Untyped
-	if err := json.NewDecoder(response.Body).Decode(&untyped); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&untyped); err != nil {
 		return nil, err
 	}
 	typed, err := searchresult.UntypedToTyped[DataType](&untyped)
@@ -75,9 +75,9 @@ func (h *githubRawHandler[DataType]) parseSearchResponse(response *http.Response
 	return typed, nil
 }
 
-func (h *githubRawHandler[DataType]) parseSliceResponse(response *http.Response) (*searchresult.Typed[DataType], error) {
+func (h *githubRawHandler[DataType]) parseSliceResponse(resp *http.Response) (*searchresult.Typed[DataType], error) {
 	untyped := make([]*DataType, 0)
-	if err := json.NewDecoder(response.Body).Decode(&untyped); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&untyped); err != nil {
 		return nil, err
 	}
 	return searchresult.FromSlice(untyped), nil
