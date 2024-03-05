@@ -1,4 +1,4 @@
-package paginationresponse_test
+package response_test
 
 import (
 	"fmt"
@@ -6,20 +6,20 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofri/go-github-pagination/githubpagination/paginationresponse"
+	"github.com/gofri/go-github-pagination/githubpagination/response"
 )
 
 type linkTestSample struct {
 	Title           string
 	EndpointExample string
-	Links           map[paginationresponse.RelType]string
+	Links           map[response.RelType]string
 	Expected        map[string]string
 }
 
 func (l linkTestSample) Test(t *testing.T) {
 	t.Run(l.Title, func(t *testing.T) {
 		t.Logf("testing %s which corresponds to %s", l.Title, l.EndpointExample)
-		parser := paginationresponse.NewParser()
+		parser := response.NewParser()
 		request, err := http.NewRequest(`GET`, `https://api.github.com/example`, nil)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
@@ -68,108 +68,108 @@ var responseLinks = []linkTestSample{
 	{
 		Title:           "page next only",
 		EndpointExample: `https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?page=2`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?page=2`,
 		},
 		Expected: map[string]string{`page`: `2`},
 	},
 	{
 		Title:           "page prev only",
 		EndpointExample: `https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypePrev: `https://api.github.com/example?page=1`,
+		Links: map[response.RelType]string{
+			response.RelTypePrev: `https://api.github.com/example?page=1`,
 		},
 		Expected: nil,
 	},
 	{
 		Title:           "page next and prev",
 		EndpointExample: `https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-organization-repositories`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?page=3`,
-			paginationresponse.RelTypePrev: `https://api.github.com/example?page=1`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?page=3`,
+			response.RelTypePrev: `https://api.github.com/example?page=1`,
 		},
 		Expected: map[string]string{`page`: `3`},
 	},
 	{
 		Title:           "page token",
 		EndpointExample: `https://docs.github.com/en/enterprise-cloud@latest/rest/teams/team-sync?apiVersion=2022-11-28#list-idp-groups-for-an-organization`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?page=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?page=ABC`,
 		},
 		Expected: map[string]string{`page`: `ABC`},
 	},
 	{
 		Title:           "cursor next only",
 		EndpointExample: `https://docs.github.com/en/rest/orgs/webhooks?apiVersion=2022-11-28#list-deliveries-for-an-organization-webhook`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?cursor=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?cursor=ABC`,
 		},
 		Expected: map[string]string{`cursor`: `ABC`},
 	},
 	{
 		Title:           "cursor prev only",
 		EndpointExample: `https://docs.github.com/en/rest/orgs/webhooks?apiVersion=2022-11-28#list-deliveries-for-an-organization-webhook`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypePrev: `https://api.github.com/example?cursor=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypePrev: `https://api.github.com/example?cursor=ABC`,
 		},
 		Expected: nil,
 	},
 	{
 		Title:           "cursor next and prev",
 		EndpointExample: `https://docs.github.com/en/rest/orgs/webhooks?apiVersion=2022-11-28#list-deliveries-for-an-organization-webhook`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?cursor=ABC`,
-			paginationresponse.RelTypePrev: `https://api.github.com/example?cursor=DEF`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?cursor=ABC`,
+			response.RelTypePrev: `https://api.github.com/example?cursor=DEF`,
 		},
 		Expected: map[string]string{`cursor`: `ABC`},
 	},
 	{
 		Title:           "after only",
 		EndpointExample: `https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs?apiVersion=2022-11-28#get-the-audit-log-for-an-organization`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?after=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?after=ABC`,
 		},
 		Expected: map[string]string{`after`: `ABC`},
 	},
 	{
 		Title:           "before only",
 		EndpointExample: `https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs?apiVersion=2022-11-28#get-the-audit-log-for-an-organization`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypePrev: `https://api.github.com/example?before=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypePrev: `https://api.github.com/example?before=ABC`,
 		},
 		Expected: nil,
 	},
 	{
 		Title:           "before and after",
 		EndpointExample: `https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs?apiVersion=2022-11-28#get-the-audit-log-for-an-organization`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?after=ABC`,
-			paginationresponse.RelTypePrev: `https://api.github.com/example?before=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?after=ABC`,
+			response.RelTypePrev: `https://api.github.com/example?before=ABC`,
 		},
 		Expected: map[string]string{`after`: `ABC`},
 	},
 	{
 		Title:           "page and before after",
 		EndpointExample: `https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?page=5&after=ABC`,
-			paginationresponse.RelTypePrev: `https://api.github.com/example?before=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?page=5&after=ABC`,
+			response.RelTypePrev: `https://api.github.com/example?before=ABC`,
 		},
 		Expected: map[string]string{`after`: `ABC`},
 	},
 	{
 		Title:           "since instead of page",
 		EndpointExample: `https://docs.github.com/en/rest/orgs/orgs?apiVersion=2022-11-28#list-organizations`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?since=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?since=ABC`,
 		},
 		Expected: map[string]string{`since`: `ABC`},
 	},
 	{
 		Title:           "since not for paging",
 		EndpointExample: `https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#list-commits`,
-		Links: map[paginationresponse.RelType]string{
-			paginationresponse.RelTypeNext: `https://api.github.com/example?page=10&since=ABC`,
+		Links: map[response.RelType]string{
+			response.RelTypeNext: `https://api.github.com/example?page=10&since=ABC`,
 		},
 		Expected: map[string]string{`page`: `10`},
 	},

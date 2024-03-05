@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gofri/go-github-pagination/githubpagination/drivers"
-	"github.com/gofri/go-github-pagination/githubpagination/paginationresponse"
 )
 
 type PaginationDriver = drivers.Driver
@@ -60,7 +59,7 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (*http.Response, err
 		}
 
 		// get the next request for pagination
-		request = paginationresponse.GetNextRequest(request, response)
+		request = response.GetNextRequest(request, response)
 		if err := driver.OnNextRequest(request, pageCount); err != nil {
 			if drivers.ShouldStop(err) {
 				break

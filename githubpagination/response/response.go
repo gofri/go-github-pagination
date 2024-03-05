@@ -1,4 +1,4 @@
-package paginationresponse
+package response
 
 import (
 	"net/http"
