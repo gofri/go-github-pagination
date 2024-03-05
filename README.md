@@ -80,7 +80,7 @@ Usage example:
   }
 ```
 
-## Search Pagination - Incomplete Results
+## Search API Pagination - Incomplete Results
 
 According to the (obscure) API documentation, some endpoints may return a dictionary instead of an array.
 This return scheme is used to report incomplete results (due to timeouts).
@@ -99,14 +99,6 @@ The merge strategy used is to summarize the total_count, OR the incomplete_resul
 In practice, this special case appears to only occur with the Search API.  
 Please report incidents with a different behaviour if you face them.
 
-## Internals - How Does It Work?
-
-The implementation consists of a few building blocks:
-
-- `jsonmerger`: merges the response body (slice/map) of the pages.
-- `pagination_utils`: utilities to handle the pagination API used by GitHub.
-- `githubpagination`: the main package that glues everything into an http.RoundTripper.
-
 ## Known Limitations
 
 The following features may be implemented in the future, per request.
@@ -117,8 +109,9 @@ Please open an issue or a pull request if you need any.
 
 ## GitHub Pagination API Documentation References
 
-- [using pagination in the rest api](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
-- [using pagination in the graphql api](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api)
+- [Using pagination in the rest api](https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api)
+- [Using pagination in the graphql api](https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api)
+- [Search API - incomplete results](https://docs.github.com/en/rest/search/search#timeouts-and-incomplete-results)
 
 ## License
 
