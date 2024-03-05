@@ -50,7 +50,7 @@ func getAuthGithubClientOrSkip(t *testing.T, httpClient *http.Client) *github.Cl
 	return client
 }
 
-func TestDemo(t *testing.T) {
+func TestSlice(t *testing.T) {
 	pager := github_pagination.NewClient(getRateLimitHandler())
 	gh := getGithubClient(pager)
 	perPage := 3
@@ -72,7 +72,7 @@ func TestDemo(t *testing.T) {
 	log.Printf("found %v repos: \n", len(repos))
 }
 
-func TestNonpagination(t *testing.T) {
+func TestNoPagination(t *testing.T) {
 	pager := github_pagination.NewClient(getRateLimitHandler())
 	gh := getGithubClient(pager)
 
