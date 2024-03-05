@@ -115,17 +115,17 @@ type customRawHandler struct {
 	t *testing.T
 }
 
-func (c *customRawHandler) HandleRawPage(response *http.Response) error {
-	if response == nil {
+func (c *customRawHandler) HandleRawPage(resp *http.Response) error {
+	if resp == nil {
 		c.t.Fatal("expected a response")
 	}
-	if response.StatusCode != http.StatusOK {
-		c.t.Fatalf("expected status code 200, got %d", response.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		c.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
 	}
-	if response.Body == nil {
+	if resp.Body == nil {
 		c.t.Fatal("expected a response body")
 	}
-	bytes, err := io.ReadAll(response.Body)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.t.Fatal(err)
 	}

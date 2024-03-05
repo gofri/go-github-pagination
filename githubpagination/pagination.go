@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gofri/go-github-pagination/githubpagination/drivers"
+	github_response "github.com/gofri/go-github-pagination/githubpagination/response"
 )
 
 type PaginationDriver = drivers.Driver
@@ -41,25 +42,25 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (*http.Response, err
 	request = reqConfig.UpdateRequest(request)
 
 	pageCount := 1
-	var response *http.Response
+	var resp *http.Response
 	for {
 		var err error
 
 		// send the request
-		response, err = g.Base.RoundTrip(request)
+		resp, err = g.Base.RoundTrip(request)
 		if err != nil {
-			driver.OnBadResponse(response, err)
+			driver.OnBadResponse(resp, err)
 			return nil, err
 		}
 
 		// only paginate through successful requests.
-		if response.StatusCode != http.StatusOK {
-			driver.OnBadResponse(response, err)
+		if resp.StatusCode != http.StatusOK {
+			driver.OnBadResponse(resp, err)
 			break
 		}
 
 		// get the next request for pagination
-		request = response.GetNextRequest(request, response)
+		request = github_response.GetNextRequest(request, resp)
 		if err := driver.OnNextRequest(request, pageCount); err != nil {
 			if drivers.ShouldStop(err) {
 				break
@@ -67,7 +68,7 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (*http.Response, err
 			return nil, err
 		}
 
-		if err := driver.OnNextResponse(response, request, pageCount); err != nil {
+		if err := driver.OnNextResponse(resp, request, pageCount); err != nil {
 			if drivers.ShouldStop(err) {
 				break
 			}
@@ -86,8 +87,8 @@ func (g *GitHubPagination) RoundTrip(request *http.Request) (*http.Response, err
 		}
 	}
 
-	if err := driver.OnFinish(response, pageCount); err != nil {
+	if err := driver.OnFinish(resp, pageCount); err != nil {
 		return nil, err
 	}
-	return response, nil
+	return resp, nil
 }

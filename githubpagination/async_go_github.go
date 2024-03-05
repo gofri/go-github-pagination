@@ -15,8 +15,8 @@ import (
 // NewAsync creates a new Async instance for non-search results.
 // Note: you can use this with search results, but the incomplete_results and total_count fields will not be available.
 func NewAsync[DataType any](onNext OnNextResponseSlice[DataType]) *Async[DataType] {
-	adapter := func(response *http.Response, result *searchresult.Typed[DataType]) error {
-		return onNext(response, result.Items)
+	adapter := func(resp *http.Response, result *searchresult.Typed[DataType]) error {
+		return onNext(resp, result.Items)
 	}
 	return NewAsyncSearch(adapter)
 }
@@ -62,18 +62,18 @@ func (a *Async[DataType]) Paginate(requestFn any, args ...any) error {
 	return nil
 }
 
-func (a *Async[DataType]) HandlePage(data *searchresult.Typed[DataType], response *http.Response) error {
+func (a *Async[DataType]) HandlePage(data *searchresult.Typed[DataType], resp *http.Response) error {
 	if a.OnNext != nil {
-		return a.OnNext(response, data)
+		return a.OnNext(resp, data)
 	}
 	return nil
 }
 
-func (a *Async[DataType]) HandleError(response *http.Response, err error) {
+func (a *Async[DataType]) HandleError(resp *http.Response, err error) {
 	a.closeErrChan(err)
 }
 
-func (a *Async[DataType]) HandleFinish(response *http.Response, pageCount int) {
+func (a *Async[DataType]) HandleFinish(resp *http.Response, pageCount int) {
 	a.closeErrChan(nil)
 }
 

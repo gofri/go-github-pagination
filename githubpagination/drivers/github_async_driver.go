@@ -8,9 +8,9 @@ import (
 )
 
 type githubAsyncPaginationHandler[DataType any] interface {
-	HandlePage(data *searchresult.Typed[DataType], response *http.Response) error
-	HandleError(response *http.Response, err error)
-	HandleFinish(response *http.Response, pageCount int)
+	HandlePage(data *searchresult.Typed[DataType], resp *http.Response) error
+	HandleError(resp *http.Response, err error)
+	HandleFinish(resp *http.Response, pageCount int)
 }
 
 // GithubAsyncPaginationDriver is a wrapper around the raw driver.
