@@ -20,11 +20,11 @@ It is best to stack the pagination round-tripper on top of the ratelimit round-t
 
 ```go
 import "github.com/google/go-github/v58/github"
-import "github.com/gofri/go-github-pagination/github_pagination/github_pagination"
+import "github.com/gofri/go-github-pagination/githubpagination"
 
 func main() {
-  paginator := github_pagination.NewClient(nil,
-    github_pagination.WithPerPage(100), // default to 100 results per page
+  paginator := githubpagination.NewClient(nil,
+    githubpagination.WithPerPage(100), // default to 100 results per page
   )
   client := github.NewClient(paginator).WithAuthToken("your personal access token")
 
@@ -62,18 +62,18 @@ _Note: please open an issue if you think that a channel-based interface would wo
 Usage example:
 
 ```go
-  paginator := github_pagination.NewClient(nil,
-    github_pagination.WithPerPage(100), // default to 100 results per page
+  paginator := githubpagination.NewClient(nil,
+    githubpagination.WithPerPage(100), // default to 100 results per page
   )
   client := github.NewClient(paginator).WithAuthToken("your personal access token")
   handler := func(resp *http.Response, repos []*github.Repository) error {
     fmt.Printf("found repos: %+v\n", repos)
     return nil
   }
-  ctx := github_pagination.WithOverrideConfig(context.Background(),
-    github_pagination.WithMaxNumOfPages(3), // e.g, limit number of pages for this request
+  ctx := githubpagination.WithOverrideConfig(context.Background(),
+    githubpagination.WithMaxNumOfPages(3), // e.g, limit number of pages for this request
   )
-  async := github_pagination.NewAsync(handler)
+  async := githubpagination.NewAsync(handler)
   err := async.Paginate(client.Repositories.ListByUser, ctx, "gofri", nil)
   if err != nil {
     panic(err)
@@ -103,9 +103,9 @@ Please report incidents with a different behaviour if you face them.
 
 The implementation consists of a few building blocks:
 
-- `json_merger`: merges the response body (slice/map) of the pages.
+- `jsonmerger`: merges the response body (slice/map) of the pages.
 - `pagination_utils`: utilities to handle the pagination API used by GitHub.
-- `github_pagination`: the main package that glues everything into an http.RoundTripper.
+- `githubpagination`: the main package that glues everything into an http.RoundTripper.
 
 ## Known Limitations
 

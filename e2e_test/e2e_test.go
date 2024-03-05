@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofri/go-github-pagination/github_pagination/github_pagination"
-	"github.com/gofri/go-github-pagination/github_pagination/github_pagination/pagination_drivers"
-	"github.com/gofri/go-github-pagination/github_pagination/pagination_utils/gh_search_result"
+	"github.com/gofri/go-github-pagination/githubpagination"
+	"github.com/gofri/go-github-pagination/githubpagination/drivers"
+	"github.com/gofri/go-github-pagination/githubpagination/searchresult"
 	"github.com/gofri/go-github-ratelimit/github_ratelimit"
 	"github.com/google/go-github/v58/github"
 )
@@ -51,7 +51,7 @@ func getAuthGithubClientOrSkip(t *testing.T, httpClient *http.Client) *github.Cl
 }
 
 func TestSlice(t *testing.T) {
-	pager := github_pagination.NewClient(getRateLimitHandler())
+	pager := githubpagination.NewClient(getRateLimitHandler())
 	gh := getGithubClient(pager)
 	perPage := 3
 
@@ -73,7 +73,7 @@ func TestSlice(t *testing.T) {
 }
 
 func TestNoPagination(t *testing.T) {
-	pager := github_pagination.NewClient(getRateLimitHandler())
+	pager := githubpagination.NewClient(getRateLimitHandler())
 	gh := getGithubClient(pager)
 
 	issue, _, err := gh.Issues.Get(context.Background(), "gofri", "go-github-pagination", 1)
@@ -88,9 +88,9 @@ func TestNoPagination(t *testing.T) {
 func TestSearch(t *testing.T) {
 	perPage := 3
 	maxPages := 2
-	pager := github_pagination.NewClient(getRateLimitHandler(),
-		github_pagination.WithPerPage(perPage),
-		github_pagination.WithMaxNumOfPages(maxPages),
+	pager := githubpagination.NewClient(getRateLimitHandler(),
+		githubpagination.WithPerPage(perPage),
+		githubpagination.WithMaxNumOfPages(maxPages),
 	)
 	gh := getAuthGithubClientOrSkip(t, pager)
 	if gh == nil {
@@ -139,13 +139,13 @@ func (c *customRawHandler) HandleRawFinish(response *http.Response, pageCount in
 func TestAsync(t *testing.T) {
 
 	t.Run("async-no-pagination", func(t *testing.T) {
-		pager := github_pagination.NewClient(getRateLimitHandler())
+		pager := githubpagination.NewClient(getRateLimitHandler())
 		gh := getGithubClient(pager)
 
 		handler := func(resp *http.Response, issues []*github.Issue) error {
 			return nil
 		}
-		async := github_pagination.NewAsync(handler)
+		async := githubpagination.NewAsync(handler)
 		err := async.Paginate(gh.Issues.Get, context.Background(), "gofri", "go-github-pagination", 1)
 		if err == nil {
 			t.Fatal("expected an error -- this is not a valid return type")
@@ -153,9 +153,9 @@ func TestAsync(t *testing.T) {
 
 		// now let's test with the raw driver - we DO expect a result
 		customHandler := &customRawHandler{t: t}
-		ctx := github_pagination.WithOverrideConfig(context.Background(),
-			github_pagination.WithDriver(
-				pagination_drivers.NewAsyncPaginationRawDriver(customHandler),
+		ctx := githubpagination.WithOverrideConfig(context.Background(),
+			githubpagination.WithDriver(
+				drivers.NewAsyncPaginationRawDriver(customHandler),
 			),
 		)
 		_, _, err = gh.Issues.Get(ctx, "gofri", "go-github-pagination", 1)
@@ -167,9 +167,9 @@ func TestAsync(t *testing.T) {
 	t.Run("async-slice", func(t *testing.T) {
 		perPage := 3
 		maxPages := 2
-		pager := github_pagination.NewClient(getRateLimitHandler(),
-			github_pagination.WithPerPage(perPage),
-			github_pagination.WithMaxNumOfPages(maxPages),
+		pager := githubpagination.NewClient(getRateLimitHandler(),
+			githubpagination.WithPerPage(perPage),
+			githubpagination.WithMaxNumOfPages(maxPages),
 		)
 		gh := getGithubClient(pager)
 
@@ -178,7 +178,7 @@ func TestAsync(t *testing.T) {
 			total.Add(int64(len(repos)))
 			return nil
 		}
-		err := github_pagination.NewAsync(handler).Paginate(gh.Repositories.ListByUser,
+		err := githubpagination.NewAsync(handler).Paginate(gh.Repositories.ListByUser,
 			context.Background(),
 			"gofri",
 			nil,
@@ -194,18 +194,18 @@ func TestAsync(t *testing.T) {
 	t.Run("async-search", func(t *testing.T) {
 		perPage := 5
 		maxPages := 2
-		pager := github_pagination.NewClient(getRateLimitHandler())
+		pager := githubpagination.NewClient(getRateLimitHandler())
 		gh := getAuthGithubClientOrSkip(t, pager)
 
 		// let's override the config in the request,
 		// so that we test the double-override functionality
-		ctx := github_pagination.WithOverrideConfig(context.Background(),
-			github_pagination.WithPerPage(perPage),
-			github_pagination.WithMaxNumOfPages(maxPages),
+		ctx := githubpagination.WithOverrideConfig(context.Background(),
+			githubpagination.WithPerPage(perPage),
+			githubpagination.WithMaxNumOfPages(maxPages),
 		)
 
 		var total atomic.Int64
-		handler := func(resp *http.Response, result *gh_search_result.Typed[github.CodeResult]) error {
+		handler := func(resp *http.Response, result *searchresult.Typed[github.CodeResult]) error {
 			if result == nil {
 				t.Fatalf("expected a result, got %v", result)
 			} else if result.TotalCount < len(result.Items) {
@@ -215,7 +215,7 @@ func TestAsync(t *testing.T) {
 			total.Add(int64(len(result.Items)))
 			return nil
 		}
-		if err := github_pagination.NewAsyncSearch(handler).Paginate(gh.Search.Code, ctx, "go_github", nil); err != nil {
+		if err := githubpagination.NewAsyncSearch(handler).Paginate(gh.Search.Code, ctx, "go_github", nil); err != nil {
 			t.Fatal(err)
 		}
 		if got, want := int(total.Load()), perPage*maxPages; got != want {
@@ -228,9 +228,9 @@ func TestAsync(t *testing.T) {
 		// works just as well as the search-result handler
 		perPage := 5
 		maxPages := 2
-		pager := github_pagination.NewClient(getRateLimitHandler(),
-			github_pagination.WithPerPage(perPage),
-			github_pagination.WithMaxNumOfPages(maxPages),
+		pager := githubpagination.NewClient(getRateLimitHandler(),
+			githubpagination.WithPerPage(perPage),
+			githubpagination.WithMaxNumOfPages(maxPages),
 		)
 		gh := getAuthGithubClientOrSkip(t, pager)
 		var total atomic.Int64
@@ -240,7 +240,7 @@ func TestAsync(t *testing.T) {
 			return nil
 		}
 		ctx := context.Background()
-		async := github_pagination.NewAsync(sliceHandler)
+		async := githubpagination.NewAsync(sliceHandler)
 		if err := async.Paginate(gh.Search.Code, ctx, "go_github", nil); err != nil {
 			t.Fatal(err)
 		}
@@ -252,22 +252,22 @@ func TestAsync(t *testing.T) {
 	t.Run("async-early-exit", func(t *testing.T) {
 		customError := errors.New("custom error")
 		maxPages := 10
-		gh := getGithubClient(github_pagination.NewClient(getRateLimitHandler()))
+		gh := getGithubClient(githubpagination.NewClient(getRateLimitHandler()))
 		var count atomic.Int64
-		handler := func(resp *http.Response, result *gh_search_result.Typed[github.Repository]) error {
+		handler := func(resp *http.Response, result *searchresult.Typed[github.Repository]) error {
 			if len(result.Items) == 0 {
 				t.Fatalf("expected at least one repo, got %d", len(result.Items))
 			}
 			count.Add(1)
 			return customError
 		}
-		ctx := github_pagination.WithOverrideConfig(context.Background(),
-			github_pagination.WithPerPage(1),
-			github_pagination.WithMaxNumOfPages(maxPages),
+		ctx := githubpagination.WithOverrideConfig(context.Background(),
+			githubpagination.WithPerPage(1),
+			githubpagination.WithMaxNumOfPages(maxPages),
 		)
 		// we use the AsyncSearch constructor although this is a slice request,
 		// just to show that it is possible
-		err := github_pagination.NewAsyncSearch(handler).Paginate(gh.Repositories.ListByUser,
+		err := githubpagination.NewAsyncSearch(handler).Paginate(gh.Repositories.ListByUser,
 			ctx, "gofri", nil,
 		)
 		if err == nil {
