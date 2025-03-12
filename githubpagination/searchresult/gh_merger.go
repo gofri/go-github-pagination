@@ -28,6 +28,10 @@ func (g *Merger) Digest(reader io.Reader) (slice json.RawMessage, err error) {
 	g.totalCount += result.TotalCount
 	g.incompleteResults = g.incompleteResults || result.IncompleteResults
 
+	if result.Items == nil {
+		return nil, nil
+	}
+
 	return *result.Items, nil
 }
 
